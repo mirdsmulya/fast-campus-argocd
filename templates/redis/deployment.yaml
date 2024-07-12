@@ -10,7 +10,7 @@ metadata:
     {{- end }}
   {{- end }}
   name: {{ include "argo-cd.redis.fullname" . }}
-  namespace: {{ include  "argo-cd.namespace" . }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "argo-cd.labels" (dict "context" . "component" .Values.redis.name "name" .Values.redis.name) | nindent 4 }}
 spec:
@@ -52,7 +52,6 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.redis.terminationGracePeriodSeconds }}
       {{- end }}
       serviceAccountName: {{ include "argo-cd.redis.serviceAccountName" . }}
-      automountServiceAccountToken: {{ .Values.redis.automountServiceAccountToken }}
       containers:
       - name: {{ .Values.redis.name }}
         image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
@@ -65,14 +64,8 @@ spec:
         - ""
         - --appendonly
         - "no"
-        - --requirepass $(REDIS_PASSWORD)
-        env:
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: argocd-redis
-              key: auth
         {{- with (concat .Values.global.env .Values.redis.env) }}
+        env:
           {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with .Values.redis.envFrom }}
@@ -130,11 +123,6 @@ spec:
           value: {{ printf "redis://localhost:%v" .Values.redis.containerPorts.redis }}
         - name: REDIS_EXPORTER_WEB_LISTEN_ADDRESS
           value: {{ printf "0.0.0.0:%v" .Values.redis.containerPorts.metrics }}
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: argocd-redis
-              key: auth
         {{- with (concat .Values.global.env .Values.redis.exporter.env) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -205,7 +193,7 @@ spec:
         - name: health
           configMap:
             name: {{ include "argo-cd.redis.fullname" . }}-health-configmap
-            defaultMode: 493
+            defaultMode: 0755
       {{- with .Values.redis.volumes }}
         {{- toYaml . | nindent 8}}
       {{- end }}

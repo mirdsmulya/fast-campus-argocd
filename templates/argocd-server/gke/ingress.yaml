@@ -5,7 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "argo-cd.server.fullname" . }}
-  namespace: {{ include  "argo-cd.namespace" . }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "argo-cd.labels" (dict "context" . "component" .Values.server.name "name" .Values.server.name) | nindent 4 }}
     {{- with .Values.server.ingress.labels }}
@@ -27,11 +27,11 @@ spec:
   ingressClassName: {{ . }}
   {{- end }}
   rules:
-    - host: {{ .Values.server.ingress.hostname | default .Values.global.domain }}
+    - host: {{ .Values.server.ingress.hostname }}
       http:
         paths:
           {{- with .Values.server.ingress.extraPaths }}
-            {{- tpl (toYaml .) $ | nindent 10 }}
+            {{- toYaml . | nindent 10 }}
           {{- end }}
           - path: {{ .Values.server.ingress.path }}
             pathType: {{ .Values.server.ingress.pathType }}
@@ -44,22 +44,22 @@ spec:
     - host: {{ .name | quote }}
       http:
         paths:
-          - path: {{ default $.Values.server.ingress.path .path }}
-            pathType: {{ default $.Values.server.ingress.pathType .pathType }}
+          - path: {{ default .Values.server.ingress.path .path }}
+            pathType: {{ default .Values.server.ingress.pathType .pathType }}
             backend:
               service:
-                name: {{ include "argo-cd.server.fullname" $ }}
+                name: {{ include "argo-cd.server.fullname" . }}
                 port:
                   number: {{ $servicePort }}
     {{- end }}
     {{- with .Values.server.ingress.extraRules }}
-      {{- tpl (toYaml .) $ | nindent 4 }}
+      {{- toYaml . | nindent 4 }}
     {{- end }}
   {{- if or .Values.server.ingress.tls .Values.server.ingress.extraTls }}
   tls:
     {{- if .Values.server.ingress.tls }}
     - hosts:
-      - {{ .Values.server.ingress.hostname | default .Values.global.domain }}
+      - {{ .Values.server.ingress.hostname }}
       secretName: argocd-server-tls
     {{- end }}
     {{- with .Values.server.ingress.extraTls }}
